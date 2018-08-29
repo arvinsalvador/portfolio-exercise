@@ -33,38 +33,27 @@
         ON DELETE NO ACTION
         ON UPDATE NO ACTION)
     ENGINE = InnoDB;
-
-
-    CREATE PROCEDURE `activities_cumqty`(IN reitCode varchar(10), OUT cumQty int)
-    BEGIN
     
-        DECLARE cursor_reit varchar(10);
-        DECLARE cursor_type varchar(10);
-        DECLARE cursor_qty int;
-        DECLARE cum_qty int;
-        DECLARE done INT DEFAULT FALSE;
-        DECLARE cursor_i CURSOR FOR SELECT REIT, type, quantity FROM activities WHERE REIT = reitCode;
-        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-        
-        SET cum_qty = 0;
-        
-        OPEN cursor_i;
-            read_loop: LOOP
-                FETCH cursor_i INTO cursor_reit, cursor_type, cursor_qty;
-                IF done THEN
-                    LEAVE read_loop;
-                END IF;
-                IF cursor_type = "BUY" THEN
-                    SET cum_qty = cum_qty + cursor_qty;
-                ELSE
-                    SET cum_qty = cum_qty - cursor_qty;
-                END IF;
-                
-            END LOOP;
-            SET cumQty = cum_qty;
-        CLOSE cursor_i;
-    END
+-- 3. Create the `prices` table.
 
+    -- -----------------------------------------------------
+    -- Table `prices`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `prices` (
+      `reit` CHAR(8) NOT NULL,
+      `price` FLOAT NOT NULL,
+      `date` DATE NOT NULL,
+      INDEX `fk_prices_reits_idx` (`reit` ASC),
+      PRIMARY KEY (`reit`),
+      CONSTRAINT `fk_prices_reits`
+        FOREIGN KEY (`reit`)
+        REFERENCES `reits` (`code`)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION)
+    ENGINE = InnoDB;
+    DELIMITER ;
+
+    DELIMITER ;;
     CREATE PROCEDURE `activities_avgbuyprice`(IN reitCode varchar(10), OUT avgBuyPrice float)
     BEGIN
     
@@ -103,8 +92,42 @@
             END LOOP;
             SET avgBuyPrice = avgBuyPrc;
         CLOSE cursor_i;
-    END
+    END;;
+    DELIMITER ;
 
+    DELIMITER ;;
+    CREATE PROCEDURE `activities_cumqty`(IN reitCode varchar(10), OUT cumQty int)
+    BEGIN
+    
+        DECLARE cursor_reit varchar(10);
+        DECLARE cursor_type varchar(10);
+        DECLARE cursor_qty int;
+        DECLARE cum_qty int;
+        DECLARE done INT DEFAULT FALSE;
+        DECLARE cursor_i CURSOR FOR SELECT REIT, type, quantity FROM activities WHERE REIT = reitCode;
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        
+        SET cum_qty = 0;
+        
+        OPEN cursor_i;
+            read_loop: LOOP
+                FETCH cursor_i INTO cursor_reit, cursor_type, cursor_qty;
+                IF done THEN
+                    LEAVE read_loop;
+                END IF;
+                IF cursor_type = "BUY" THEN
+                    SET cum_qty = cum_qty + cursor_qty;
+                ELSE
+                    SET cum_qty = cum_qty - cursor_qty;
+                END IF;
+                
+            END LOOP;
+            SET cumQty = cum_qty;
+        CLOSE cursor_i;
+    END;;
+    DELIMITER ;
+
+    DELIMITER ;;
     CREATE PROCEDURE `activities_sellprofit`(IN reitCode varchar(10), OUT sellProfit float)
     BEGIN
     
@@ -150,45 +173,11 @@
             END LOOP;
             SET sellProfit = avgsProfit;
         CLOSE cursor_i;
-    END
-
-    CREATE PROCEDURE `getPriceValue`(IN reitCode varchar(10), IN prcDate date, OUT prcVal float)
-    BEGIN
-        DECLARE cursor_price float;
-        DECLARE done INT DEFAULT FALSE;
-        DECLARE cursor_i CURSOR FOR SELECT price FROM prices WHERE reit = reitCode AND date = prcDate;
-        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-        
-        OPEN cursor_i;
-            read_loop: LOOP
-                FETCH cursor_i INTO cursor_price;
-                IF done THEN
-                    LEAVE read_loop;
-                END IF;
-            END LOOP;
-            SET prcVal = cursor_price;
-        CLOSE cursor_i;
-    END
--- 3. Create the `prices` table.
-
-    -- -----------------------------------------------------
-    -- Table `prices`
-    -- -----------------------------------------------------
-    CREATE TABLE IF NOT EXISTS `prices` (
-      `reit` CHAR(8) NOT NULL,
-      `price` FLOAT NOT NULL,
-      `date` DATE NOT NULL,
-      INDEX `fk_prices_reits_idx` (`reit` ASC),
-      PRIMARY KEY (`reit`),
-      CONSTRAINT `fk_prices_reits`
-        FOREIGN KEY (`reit`)
-        REFERENCES `reits` (`code`)
-        ON DELETE NO ACTION
-        ON UPDATE NO ACTION)
-    ENGINE = InnoDB;
+    END;;
+    DELIMITER ;
 
 -- 4. Define the `calculateHoldings` procedure.
-
+    DELIMITER ;; 
     CREATE PROCEDURE `calculateHoldings`(IN inpDate date)
     BEGIN
         
@@ -204,11 +193,11 @@
         DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
         
         CREATE TABLE IF NOT EXISTS `tmp_holdings` (
-        `reit` CHAR(8) NOT NULL,
-        `quantity` INT NOT NULL,
-        `buyPrice` FLOAT NOT NULL,
-        `sellProfit` FLOAT NOT NULL,
-        `profits` INT NOT NULL);
+            `reit` CHAR(8) NOT NULL,
+            `quantity` INT NOT NULL,
+            `buyPrice` FLOAT NOT NULL,
+            `sellProfit` FLOAT NOT NULL,
+            `profits` INT NOT NULL);
         
         OPEN cursor_i;
             read_loop: LOOP
@@ -227,10 +216,11 @@
             SELECT * FROM tmp_holdings;
         CLOSE cursor_i;
         DROP TABLE tmp_holdings;
-    END
-
+    END;;
+    DELIMITER ;
+    
 -- 5. Define the `calculateMetrics` procedure.
-
+    DELIMITER ;;
     CREATE PROCEDURE `calculateMetrics`(IN inpDate date)
     BEGIN
         DECLARE cursor_reit varchar(10);
@@ -265,7 +255,28 @@
             END LOOP;
             SELECT tValue, tProfit;
         CLOSE cursor_i;
-    END
+    END;;
+    DELIMITER ;
+
+    DELIMITER ;;
+    CREATE PROCEDURE `getPriceValue`(IN reitCode varchar(10), IN prcDate date, OUT prcVal float)
+    BEGIN
+        DECLARE cursor_price float;
+        DECLARE done INT DEFAULT FALSE;
+        DECLARE cursor_i CURSOR FOR SELECT price FROM prices WHERE reit = reitCode AND date = prcDate;
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        
+        OPEN cursor_i;
+            read_loop: LOOP
+                FETCH cursor_i INTO cursor_price;
+                IF done THEN
+                    LEAVE read_loop;
+                END IF;
+            END LOOP;
+            SET prcVal = cursor_price;
+        CLOSE cursor_i;
+    END;;
+    DELIMITER ;
 
 -- 6. Load `reits.csv` into the `reits` table.
 
