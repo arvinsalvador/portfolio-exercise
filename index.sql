@@ -213,6 +213,42 @@
 
 -- 5. Define the `calculateMetrics` procedure.
 
+    CREATE PROCEDURE `calculateMetrics`(IN inpDate date)
+    BEGIN
+        DECLARE cursor_reit varchar(10);
+        DECLARE hQty int;
+        DECLARE hAvgBuyPrice float;
+        DECLARE hSellProfit float;
+        DECLARE hPrice float;
+        DECLARE hTProfits float;
+        DECLARE tValue int;
+        DECLARE tProfit int;
+        DECLARE done INT DEFAULT FALSE;
+        DECLARE cursor_i CURSOR FOR SELECT R.code FROM prices as P LEFT JOIN reits  as R ON P.reit = R.code WHERE P.date = inpDate;
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        
+        SET tValue = 0;
+        SET tProfit = 0;
+        
+        OPEN cursor_i;
+            read_loop: LOOP
+                FETCH cursor_i INTO cursor_reit;
+                IF done THEN
+                    LEAVE read_loop;
+                END IF;
+                CALL activities_cumqty(cursor_reit, hQty);
+                CALL activities_avgbuyprice(cursor_reit, hAvgBuyPrice);
+                CALL activities_sellprofit(cursor_reit, hSellProfit);
+                CALL getPriceValue(cursor_reit, inpDate, hPrice);
+                
+                SET hTProfits = hSellProfit + (hPrice - hAvgBuyPrice) * hQty;
+                SET tValue = tValue + (hQty * hPrice);
+                SET tProfit = tProfit + hTProfits;
+            END LOOP;
+            SELECT tValue, tProfit;
+        CLOSE cursor_i;
+    END
+
 -- 6. Load `reits.csv` into the `reits` table.
 
     LOAD DATA INFILE 'reits.csv' 
