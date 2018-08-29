@@ -151,6 +151,24 @@
             SET sellProfit = avgsProfit;
         CLOSE cursor_i;
     END
+
+    CREATE PROCEDURE `getPriceValue`(IN reitCode varchar(10), IN prcDate date, OUT prcVal float)
+    BEGIN
+        DECLARE cursor_price float;
+        DECLARE done INT DEFAULT FALSE;
+        DECLARE cursor_i CURSOR FOR SELECT price FROM prices WHERE reit = reitCode AND date = prcDate;
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+        
+        OPEN cursor_i;
+            read_loop: LOOP
+                FETCH cursor_i INTO cursor_price;
+                IF done THEN
+                    LEAVE read_loop;
+                END IF;
+            END LOOP;
+            SET prcVal = cursor_price;
+        CLOSE cursor_i;
+    END
 -- 3. Create the `prices` table.
 
     -- -----------------------------------------------------
